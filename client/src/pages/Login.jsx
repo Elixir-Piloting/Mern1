@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import axiosInstance from "../utils/axiosInstance";
 
 export const Login = () => {
-  const PROXY = "http://localhost:3000"; // Backend URL
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [login, setLogin] = useState(""); // Accepts either email or username
   const [password, setPassword] = useState("");
@@ -21,20 +22,24 @@ export const Login = () => {
     setIsValidInput(isValid);
   }, [login, password]);
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = useCallback(async (event) => {
     event.preventDefault();
-
+  
     try {
-      const response = await axios.post(`${PROXY}/login`, { login, password });
-
-      if (response.data.token) {
+      const response = await axiosInstance.post(
+        `/login`, 
+        { login, password },
+        { withCredentials: true }
+      );
+  
+      if (response.data.success) {
         toast.success("Login successful! Redirecting...");
         
-        // Store token in localStorage or sessionStorage
-        localStorage.setItem("token", response.data.token);
+        // Get the redirect path from location state or default to dashboard
+        const from = location.state?.from?.pathname || "/dashboard";
         
         setTimeout(() => {
-          navigate("/dashboard"); // Redirect after login
+          navigate(from, { replace: true });
         }, 2000);
       } else {
         toast.error(response.data.message || "Invalid credentials");
@@ -42,7 +47,7 @@ export const Login = () => {
     } catch (error) {
       toast.error(error.response?.data?.message || "Something went wrong");
     }
-  };
+  }, [login, password, navigate, location.state]);
 
   return (
     <div className="h-screen w-full flex justify-center items-center">
